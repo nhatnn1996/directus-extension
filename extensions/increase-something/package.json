@@ -1,0 +1,18 @@
+{
+  "name": "operation-increase-something",
+  "version": "1.0.0",
+  "description": "Tăng giá trị của một trường trong collection bất kỳ",
+  "icon": "add_circle",
+  "directus:extension": {
+    "type": "operation",
+    "path": {
+      "app": "app.js",
+      "api": "api.js"
+    },
+    "source": {
+      "app": "app.js",
+      "api": "api.js"
+    },
+    "host": "^10.10.0"
+  }
+}
