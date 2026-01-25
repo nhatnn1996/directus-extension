@@ -1,66 +1,87 @@
 module.exports = {
-  id: "inventory-deduct",
+  id: "increase-something",
   handler: async (
-    { items, collection, product_id_field, quantity_field, inventory_field },
+    {
+      source_collection,
+      source_id,
+      source_link_field,
+      source_amount_field,
+      target_collection,
+      target_field,
+    },
     { database }
   ) => {
-    // 1. Validate Input cơ bản
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      // Không có gì để xử lý thì return luôn cho nhẹ
-      return { success: true, message: "No items to process" };
+    // 1. Validate Input
+    if (!source_collection || !source_id) {
+      throw new Error("Missing required: source_collection or source_id");
+    }
+    if (!target_collection || !target_field) {
+      throw new Error("Missing required: target_collection or target_field");
     }
 
-    // Set giá trị mặc định nếu người dùng không điền
-    const f_prodId = product_id_field || "product_id";
-    const f_qty = quantity_field || "quantity";
-    const f_inv = inventory_field || "inventory";
+    // Đặt giá trị mặc định
+    const linkField = source_link_field || "product_id";
+    const amountField = source_amount_field || "quantity";
 
-    // 2. Bắt đầu Transaction (Quan trọng nhất)
-    // Dùng transaction để đảm bảo "Được ăn cả, ngã về không"
-    await database.transaction(async (trx) => {
-      for (const item of items) {
-        const productId = item[f_prodId];
-        const qtyToDeduct = Number(item[f_qty] || 1); // Mặc định là 1 nếu không có field qty
+    // 2. Bắt đầu Transaction
+    const result = await database.transaction(async (trx) => {
+      // 3. Query lấy detail từ Source Collection
+      const sourceItem = await trx(source_collection)
+        .select("*")
+        .where("id", source_id)
+        .first();
 
-        if (!productId) continue; // Bỏ qua nếu không có ID sản phẩm
-
-        // 3. Query lấy tồn kho hiện tại (có khóa dòng - lock row để tránh race condition)
-        // .forUpdate() giúp lock dòng này lại, người khác không update được cho đến khi ta xong
-        const product = await trx(collection)
-          .select("id", f_inv) // Select field inventory động
-          .where("id", productId)
-          .first()
-          .forUpdate();
-
-        if (!product) {
-          throw new Error(
-            `Product ID "${productId}" not found in collection "${collection}"`
-          );
-        }
-
-        const currentInv = Number(product[f_inv] || 0);
-
-        // 4. Kiểm tra điều kiện âm kho
-        if (currentInv - qtyToDeduct < 0) {
-          // Ném lỗi sẽ kích hoạt Rollback toàn bộ transaction
-          throw new Error(
-            `Insufficient inventory for Product ID "${productId}". Current: ${currentInv}, Required: ${qtyToDeduct}`
-          );
-        }
-
-        // 5. Update trừ kho
-        await trx(collection)
-          .where("id", productId)
-          .update({
-            [f_inv]: currentInv - qtyToDeduct,
-          });
+      if (!sourceItem) {
+        throw new Error(
+          `Source item with ID "${source_id}" not found in "${source_collection}"`
+        );
       }
+
+      // 4. Lấy giá trị link ID và amount từ source
+      const targetItemId = sourceItem[linkField];
+      const amountToAdd = Number(sourceItem[amountField] || 0);
+
+      if (!targetItemId) {
+        throw new Error(
+          `Link field "${linkField}" is empty in source item "${source_id}"`
+        );
+      }
+
+      // 5. Query Target Collection với lock (forUpdate)
+      const targetItem = await trx(target_collection)
+        .select("id", target_field)
+        .where("id", targetItemId)
+        .first()
+        .forUpdate();
+
+      if (!targetItem) {
+        throw new Error(
+          `Target item with ID "${targetItemId}" not found in "${target_collection}"`
+        );
+      }
+
+      const currentValue = Number(targetItem[target_field] || 0);
+      const newValue = currentValue + amountToAdd;
+
+      // 6. Update Target Collection
+      await trx(target_collection)
+        .where("id", targetItemId)
+        .update({
+          [target_field]: newValue,
+        });
+
+      return {
+        source_id,
+        target_id: targetItemId,
+        previous_value: currentValue,
+        added: amountToAdd,
+        new_value: newValue,
+      };
     });
 
-    // 6. Trả về kết quả cho Flow biết
     return {
       success: true,
-      processed_count: items.length,
+      ...result,
     };
   },
 };

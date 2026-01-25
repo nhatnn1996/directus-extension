@@ -1,45 +1,47 @@
 export default {
-  id: "inventory-deduct",
-  name: "Deduct Inventory",
-  icon: "inventory_2",
-  description: "Trừ kho an toàn cho danh sách items",
-  overview: ({ collection, quantity_field }) => [
+  id: "increase-something",
+  name: "Increase Something",
+  icon: "add_circle",
+  description: "Lấy dữ liệu từ Collection nguồn, dùng để tăng giá trị trên Collection đích",
+  overview: ({ source_collection, target_collection, target_field }) => [
     {
-      label: "Target Collection",
-      text: collection,
+      label: "Source",
+      text: source_collection,
     },
     {
-      label: "Qty Field",
-      text: quantity_field,
+      label: "Target",
+      text: target_collection,
+    },
+    {
+      label: "Field to Update",
+      text: target_field,
     },
   ],
   options: [
+    // === SOURCE SECTION ===
     {
-      field: "items",
-      name: "Source Items (Array)",
-      type: "json",
-      meta: {
-        width: "full",
-        interface: "input-code", // Cho phép điền {{previous_step}}
-        options: {
-          placeholder: "{{read_orders}}",
-        },
-        note: "Mảng chứa danh sách các item cần trừ kho (VD: Output của bước Read Data).",
-      },
-    },
-    {
-      field: "collection",
-      name: "Target Collection",
+      field: "source_collection",
+      name: "Source Collection",
       type: "string",
       meta: {
         width: "half",
-        interface: "system-collection", // Dropdown chọn bảng
-        note: "Bảng chứa sản phẩm cần trừ (VD: gifts, products).",
+        interface: "system-collection",
+        note: "Collection nguồn chứa dữ liệu (VD: orders, order_items).",
       },
     },
     {
-      field: "product_id_field",
-      name: "Product ID Field (in Source)",
+      field: "source_id",
+      name: "Source Item ID",
+      type: "string",
+      meta: {
+        width: "half",
+        interface: "input",
+        note: "ID của item nguồn (VD: {{$trigger.key}}).",
+      },
+    },
+    {
+      field: "source_link_field",
+      name: "Source Link Field",
       type: "string",
       schema: {
         default_value: "product_id",
@@ -47,12 +49,12 @@ export default {
       meta: {
         width: "half",
         interface: "input",
-        note: "Tên trường chứa ID sản phẩm trong mảng Source (VD: gift, product_id).",
+        note: "Tên field trong Source chứa ID liên kết đến Target (VD: product_id, gift_id).",
       },
     },
     {
-      field: "quantity_field",
-      name: "Quantity Field (in Source)",
+      field: "source_amount_field",
+      name: "Source Amount Field",
       type: "string",
       schema: {
         default_value: "quantity",
@@ -60,20 +62,31 @@ export default {
       meta: {
         width: "half",
         interface: "input",
-        note: "Tên trường số lượng trong mảng Source.",
+        note: "Tên field trong Source chứa số lượng cần cộng (VD: quantity, amount).",
+      },
+    },
+    // === TARGET SECTION ===
+    {
+      field: "target_collection",
+      name: "Target Collection",
+      type: "string",
+      meta: {
+        width: "half",
+        interface: "system-collection",
+        note: "Collection đích cần cập nhật (VD: products, gifts).",
       },
     },
     {
-      field: "inventory_field",
-      name: "Inventory Field (in Target)",
+      field: "target_field",
+      name: "Target Field to Increase",
       type: "string",
       schema: {
-        default_value: "inventory",
+        default_value: "total_sold",
       },
       meta: {
         width: "half",
         interface: "input",
-        note: "Tên trường tồn kho trong bảng Target.",
+        note: "Tên field trong Target sẽ được cộng thêm giá trị (VD: total_sold, usage_count).",
       },
     },
   ],
