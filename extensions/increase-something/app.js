@@ -2,64 +2,91 @@ export default {
   id: "increase-something",
   name: "Increase Something",
   icon: "add_circle",
-  description: "Tăng giá trị của một trường trong collection bất kỳ",
-  overview: ({ collection, item_id, field, amount }) => [
+  description: "Lấy dữ liệu từ Collection nguồn, dùng để tăng giá trị trên Collection đích",
+  overview: ({ source_collection, target_collection, target_field }) => [
     {
-      label: "Collection",
-      text: collection,
+      label: "Source",
+      text: source_collection,
     },
     {
-      label: "Item ID",
-      text: item_id,
+      label: "Target",
+      text: target_collection,
     },
     {
-      label: "Field",
-      text: field,
-    },
-    {
-      label: "Amount",
-      text: amount,
+      label: "Field to Update",
+      text: target_field,
     },
   ],
   options: [
+    // === SOURCE SECTION ===
     {
-      field: "collection",
+      field: "source_collection",
+      name: "Source Collection",
+      type: "string",
+      meta: {
+        width: "half",
+        interface: "system-collection",
+        note: "Collection nguồn chứa dữ liệu (VD: orders, order_items).",
+      },
+    },
+    {
+      field: "source_id",
+      name: "Source Item ID",
+      type: "string",
+      meta: {
+        width: "half",
+        interface: "input",
+        note: "ID của item nguồn (VD: {{$trigger.key}}).",
+      },
+    },
+    {
+      field: "source_link_field",
+      name: "Source Link Field",
+      type: "string",
+      schema: {
+        default_value: "product_id",
+      },
+      meta: {
+        width: "half",
+        interface: "input",
+        note: "Tên field trong Source chứa ID liên kết đến Target (VD: product_id, gift_id).",
+      },
+    },
+    {
+      field: "source_amount_field",
+      name: "Source Amount Field",
+      type: "string",
+      schema: {
+        default_value: "quantity",
+      },
+      meta: {
+        width: "half",
+        interface: "input",
+        note: "Tên field trong Source chứa số lượng cần cộng (VD: quantity, amount).",
+      },
+    },
+    // === TARGET SECTION ===
+    {
+      field: "target_collection",
       name: "Target Collection",
       type: "string",
       meta: {
         width: "half",
         interface: "system-collection",
-        note: "Bảng chứa item cần cập nhật.",
+        note: "Collection đích cần cập nhật (VD: products, gifts).",
       },
     },
     {
-      field: "item_id",
-      name: "Item ID",
+      field: "target_field",
+      name: "Target Field to Increase",
       type: "string",
-      meta: {
-        width: "half",
-        interface: "input",
-        note: "ID của bản ghi cần tăng giá trị (có thể dùng {{ }}).",
+      schema: {
+        default_value: "total_sold",
       },
-    },
-    {
-      field: "field",
-      name: "Field Name",
-      type: "string",
       meta: {
         width: "half",
         interface: "input",
-        note: "Tên trường (field) cần cộng thêm giá trị.",
-      },
-    },
-    {
-      field: "amount",
-      name: "Amount to Increase",
-      type: "integer",
-      meta: {
-        width: "half",
-        interface: "input",
-        note: "Số lượng cần cộng thêm (có thể dùng {{ }}).",
+        note: "Tên field trong Target sẽ được cộng thêm giá trị (VD: total_sold, usage_count).",
       },
     },
   ],

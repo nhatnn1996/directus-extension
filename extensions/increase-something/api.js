@@ -1,43 +1,87 @@
 module.exports = {
   id: "increase-something",
-  handler: async ({ collection, item_id, field, amount }, { database }) => {
+  handler: async (
+    {
+      source_collection,
+      source_id,
+      source_link_field,
+      source_amount_field,
+      target_collection,
+      target_field,
+    },
+    { database }
+  ) => {
     // 1. Validate Input
-    if (!collection || !item_id || !field) {
-      throw new Error("Missing required parameters: collection, item_id, or field");
+    if (!source_collection || !source_id) {
+      throw new Error("Missing required: source_collection or source_id");
+    }
+    if (!target_collection || !target_field) {
+      throw new Error("Missing required: target_collection or target_field");
     }
 
-    const incrementValue = Number(amount || 0);
+    // Đặt giá trị mặc định
+    const linkField = source_link_field || "product_id";
+    const amountField = source_amount_field || "quantity";
 
-    // 2. Bắt đầu Transaction để đảm bảo tính nhất quán
-    await database.transaction(async (trx) => {
-      // 3. Query lấy giá trị hiện tại và lock dòng (forUpdate)
-      const item = await trx(collection)
-        .select("id", field)
-        .where("id", item_id)
+    // 2. Bắt đầu Transaction
+    const result = await database.transaction(async (trx) => {
+      // 3. Query lấy detail từ Source Collection
+      const sourceItem = await trx(source_collection)
+        .select("*")
+        .where("id", source_id)
+        .first();
+
+      if (!sourceItem) {
+        throw new Error(
+          `Source item with ID "${source_id}" not found in "${source_collection}"`
+        );
+      }
+
+      // 4. Lấy giá trị link ID và amount từ source
+      const targetItemId = sourceItem[linkField];
+      const amountToAdd = Number(sourceItem[amountField] || 0);
+
+      if (!targetItemId) {
+        throw new Error(
+          `Link field "${linkField}" is empty in source item "${source_id}"`
+        );
+      }
+
+      // 5. Query Target Collection với lock (forUpdate)
+      const targetItem = await trx(target_collection)
+        .select("id", target_field)
+        .where("id", targetItemId)
         .first()
         .forUpdate();
 
-      if (!item) {
-        throw new Error(`Item with ID "${item_id}" not found in collection "${collection}"`);
+      if (!targetItem) {
+        throw new Error(
+          `Target item with ID "${targetItemId}" not found in "${target_collection}"`
+        );
       }
 
-      const currentValue = Number(item[field] || 0);
-      const newValue = currentValue + incrementValue;
+      const currentValue = Number(targetItem[target_field] || 0);
+      const newValue = currentValue + amountToAdd;
 
-      // 4. Cập nhật giá trị mới
-      await trx(collection)
-        .where("id", item_id)
+      // 6. Update Target Collection
+      await trx(target_collection)
+        .where("id", targetItemId)
         .update({
-          [field]: newValue,
+          [target_field]: newValue,
         });
+
+      return {
+        source_id,
+        target_id: targetItemId,
+        previous_value: currentValue,
+        added: amountToAdd,
+        new_value: newValue,
+      };
     });
 
     return {
       success: true,
-      collection,
-      item_id,
-      field,
-      increased_by: incrementValue,
+      ...result,
     };
   },
 };
