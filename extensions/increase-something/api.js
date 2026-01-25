@@ -5,7 +5,7 @@ module.exports = {
       source_collection,
       source_id,
       source_link_field,
-      source_amount_field,
+      amount,
       target_collection,
       target_field,
     },
@@ -21,7 +21,7 @@ module.exports = {
 
     // Đặt giá trị mặc định
     const linkField = source_link_field || "product_id";
-    const amountField = source_amount_field || "quantity";
+    const amountToAdd = Number(amount || 0);
 
     // 2. Bắt đầu Transaction
     const result = await database.transaction(async (trx) => {
@@ -37,9 +37,8 @@ module.exports = {
         );
       }
 
-      // 4. Lấy giá trị link ID và amount từ source
+      // 4. Lấy giá trị link ID từ source
       const targetItemId = sourceItem[linkField];
-      const amountToAdd = Number(sourceItem[amountField] || 0);
 
       if (!targetItemId) {
         throw new Error(

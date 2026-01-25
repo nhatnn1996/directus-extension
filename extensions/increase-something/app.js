@@ -3,7 +3,7 @@ export default {
   name: "Increase Something",
   icon: "add_circle",
   description: "Lấy dữ liệu từ Collection nguồn, dùng để tăng giá trị trên Collection đích",
-  overview: ({ source_collection, target_collection, target_field }) => [
+  overview: ({ source_collection, target_collection, target_field, amount }) => [
     {
       label: "Source",
       text: source_collection,
@@ -13,8 +13,12 @@ export default {
       text: target_collection,
     },
     {
-      label: "Field to Update",
+      label: "Field",
       text: target_field,
+    },
+    {
+      label: "Amount",
+      text: amount,
     },
   ],
   options: [
@@ -53,16 +57,16 @@ export default {
       },
     },
     {
-      field: "source_amount_field",
-      name: "Source Amount Field",
+      field: "amount",
+      name: "Amount to Add",
       type: "string",
       schema: {
-        default_value: "quantity",
+        default_value: "1",
       },
       meta: {
         width: "half",
         interface: "input",
-        note: "Tên field trong Source chứa số lượng cần cộng (VD: quantity, amount).",
+        note: "Số lượng muốn cộng thêm (VD: 1, 5, {{$trigger.payload.qty}}).",
       },
     },
     // === TARGET SECTION ===
